@@ -1490,14 +1490,16 @@ class Zeroconf(object):
             self.notifyAll()
             self.engine.notify()
             self.unregisterAllServices()
-            if self.address_family == socket.AF_INET:
-                self.socket.setsockopt(socket.SOL_IP, socket.IP_DROP_MEMBERSHIP,
-                    socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
-            else:
-                self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_LEAVE_GROUP,
-                    socket.inet_pton(socket.AF_INET6, _MDNS_ADDRv6) + struct.pack('I', self.intf))
-            self.socket.close()
-            
+
+        if self.address_family == socket.AF_INET:
+            self.socket.setsockopt(socket.SOL_IP, socket.IP_DROP_MEMBERSHIP,
+                socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
+        else:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_LEAVE_GROUP,
+                socket.inet_pton(socket.AF_INET6, _MDNS_ADDRv6) + struct.pack('I', self.intf))
+        self.socket.close()
+
+
 # Test a few module features, including service registration, service
 # query (for Zoe), and service unregistration.
 
