@@ -791,6 +791,7 @@ class Engine(threading.Thread):
         self.readers = {} # maps socket to reader
         self.timeout = 5
         self.notify_pipe = os.pipe() # used for immediate unblocking
+        self.pipe_lock = threading.Lock()
         self.start()
 
     def run(self):
@@ -801,7 +802,8 @@ class Engine(threading.Thread):
                 rr, wr, er = select.select(rs, [], [], self.timeout)
                 for socket in rr:
                     if socket == self.notify_pipe[0]:
-                        os.read(self.notify_pipe[0]) # just read off the buffer
+                        with self.pipe_lock:
+                            os.read(self.notify_pipe[0]) # just read off the buffer
                     try:
                         self.readers[socket].handle_read()
                     except:
@@ -809,6 +811,12 @@ class Engine(threading.Thread):
                         pass
             except:
                 pass
+
+        # Perform resource cleanup
+        with self.pipe_lock:
+            os.close(self.notify_pipe[0])
+            os.close(self.notify_pipe[1])
+            self.notify_pipe = None
 
     def getReaders(self):
         return self.readers.keys()
@@ -822,7 +830,9 @@ class Engine(threading.Thread):
         self.notify()
 
     def notify(self):
-        os.write(self.notify_pipe[1], "notify")
+        with self.pipe_lock:
+            if self.notify_pipe is not None:
+                os.write(self.notify_pipe[1], "notify")
 
 class Listener(object):
     """A Listener is used by this module to listen on the multicast
